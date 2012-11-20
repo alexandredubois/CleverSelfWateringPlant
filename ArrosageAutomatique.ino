@@ -15,6 +15,60 @@
   For more information, check out:
   http://www.instructables.com/id/Self-Watering-Plant/
  */
+#include <avr/sleep.h>
+#include <avr/power.h>
+#include <avr/wdt.h>
+
+volatile int f_wdt=1;
+
+/***************************************************
+ *  Name:        ISR(WDT_vect)
+ *
+ *  Returns:     Nothing.
+ *
+ *  Parameters:  None.
+ *
+ *  Description: Watchdog Interrupt Service. This
+ *               is executed when watchdog timed out.
+ *
+ ***************************************************/
+ISR(WDT_vect)
+{
+  if(f_wdt == 0)
+  {
+    f_wdt=1;
+  }
+  else
+  {
+    Serial.println("WDT Overrun!!!");
+  }
+}
+
+
+/***************************************************
+ *  Name:        enterSleep
+ *
+ *  Returns:     Nothing.
+ *
+ *  Parameters:  None.
+ *
+ *  Description: Enters the arduino into sleep mode.
+ *
+ ***************************************************/
+void enterSleep(void)
+{
+  set_sleep_mode(SLEEP_MODE_PWR_DOWN);   /* EDIT: could also use SLEEP_MODE_PWR_DOWN for lowest power consumption. */
+  sleep_enable();
+  
+  /* Now enter sleep mode. */
+  sleep_mode();
+  
+  /* The program will continue from here after the WDT timeout*/
+  sleep_disable(); /* First thing to do is disable sleep. */
+  
+  /* Re-enable the peripherals. */
+  power_all_enable();
+}
 
 
 // Analog input pin that the soil moisture sensor is attached to
@@ -29,35 +83,86 @@ int lightValue = 0;
 int dryValue = 700;
 int darkValue = 500;
 
-void setup() {
+/***************************************************
+ *  Name:        setup
+ *
+ *  Returns:     Nothing.
+ *
+ *  Parameters:  None.
+ *
+ *  Description: Setup for the serial comms and the
+ *                Watch dog timeout. 
+ *
+ ***************************************************/
+void setup()
+{
+  Serial.begin(9600);
+  Serial.println("Initialising...");
+  
+  /*** Setup the WDT ***/
+  
+  /* Clear the reset flag. */
+  MCUSR &= ~(1<<WDRF);
+  
+  /* In order to change WDE or the prescaler, we need to
+   * set WDCE (This will allow updates for 4 clock cycles).
+   */
+  WDTCSR |= (1<<WDCE) | (1<<WDE);
+
+  /* set new watchdog timeout prescaler value */
+  WDTCSR = 1<<WDP0 | 1<<WDP3; /* 8.0 seconds */
+  
+  /* Enable the WD interrupt (note no reset). */
+  WDTCSR |= _BV(WDIE);
   
   pinMode(12, OUTPUT);
   
-  // initialize serial communications at 9600 bps:
-  Serial.begin(9600); 
+  Serial.println("Initialisation complete.");
 }
 
-void loop() {
-  // read the analog in value:
-  probesValue = analogRead(probesInPin);
-  lightValue = analogRead(lightInPin);
 
-  // print the probes value to the serial monitor:
-  Serial.print("probes value = " );                       
-  Serial.println(probesValue);
 
-  Serial.print("light value = " );                       
-  Serial.println(lightValue);   
+/***************************************************
+ *  Name:        enterSleep
+ *
+ *  Returns:     Nothing.
+ *
+ *  Parameters:  None.
+ *
+ *  Description: Main application loop.
+ *
+ ***************************************************/
+void loop()
+{
+  if(f_wdt == 1)
+  {
+    // read the analog in value:
+    probesValue = analogRead(probesInPin);
+    lightValue = analogRead(lightInPin);
 
-  //Turns on the water pump if the soil is too dry
-  //Increasing the delay will increase the amount of water pumped
-  if(probesValue < dryValue && lightValue < darkValue){
-    digitalWrite(12, HIGH);
-    delay(10000);
-    digitalWrite(12, LOW);
-  }
+    // print the probes value to the serial monitor:
+    Serial.print("probes value = " );                       
+    Serial.println(probesValue);
+
+    Serial.print("light value = " );                       
+    Serial.println(lightValue);   
+
+    //Turns on the water pump if the soil is too dry
+    //Increasing the delay will increase the amount of water pumped
+    if(probesValue < dryValue && lightValue < darkValue){
+      digitalWrite(12, HIGH);
+      delay(5000);
+      digitalWrite(12, LOW);
+    }
     
-  
-  //slow your roll - I mean... slow down the code a little
-  delay(5000);                     
+    /* Don't forget to clear the flag. */
+    f_wdt = 0;
+    
+    /* Re-enter sleep mode. */
+    enterSleep();
+  }
+  else
+  {
+    /* Do nothing. */
+  }
 }
