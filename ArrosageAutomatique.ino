@@ -120,23 +120,9 @@ void setup()
   Serial.println("Initialisation complete.");
 }
 
-
-
-/***************************************************
- *  Name:        enterSleep
- *
- *  Returns:     Nothing.
- *
- *  Parameters:  None.
- *
- *  Description: Main application loop.
- *
- ***************************************************/
-void loop()
+void water()
 {
-  if(f_wdt == 1)
-  {
-    // read the analog in value:
+  // read the analog in value:
     probesValue = analogRead(probesInPin);
     lightValue = analogRead(lightInPin);
 
@@ -154,6 +140,23 @@ void loop()
       delay(5000);
       digitalWrite(12, LOW);
     }
+}
+
+/***************************************************
+ *  Name:        enterSleep
+ *
+ *  Returns:     Nothing.
+ *
+ *  Parameters:  None.
+ *
+ *  Description: Main application loop.
+ *
+ ***************************************************/
+void loop()
+{
+  if(f_wdt == 1)
+  {
+    water();
     
     /* Don't forget to clear the flag. */
     f_wdt = 0;
