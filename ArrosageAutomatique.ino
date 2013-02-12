@@ -19,69 +19,24 @@
 #include <avr/power.h>
 #include <avr/wdt.h>
 
-volatile int f_wdt=1;
-
-/***************************************************
- *  Name:        ISR(WDT_vect)
- *
- *  Returns:     Nothing.
- *
- *  Parameters:  None.
- *
- *  Description: Watchdog Interrupt Service. This
- *               is executed when watchdog timed out.
- *
- ***************************************************/
-ISR(WDT_vect)
+// watchdog interrupt
+ISR (WDT_vect) 
 {
-  if(f_wdt == 0)
-  {
-    f_wdt=1;
-  }
-  else
-  {
-    Serial.println("WDT Overrun!!!");
-  }
-}
-
-
-/***************************************************
- *  Name:        enterSleep
- *
- *  Returns:     Nothing.
- *
- *  Parameters:  None.
- *
- *  Description: Enters the arduino into sleep mode.
- *
- ***************************************************/
-void enterSleep(void)
-{
-  set_sleep_mode(SLEEP_MODE_PWR_DOWN);   /* EDIT: could also use SLEEP_MODE_PWR_DOWN for lowest power consumption. */
-  sleep_enable();
-  
-  /* Now enter sleep mode. */
-  sleep_mode();
-  
-  /* The program will continue from here after the WDT timeout*/
-  sleep_disable(); /* First thing to do is disable sleep. */
-  
-  /* Re-enable the peripherals. */
-  power_all_enable();
-}
-
+   wdt_disable();  // disable watchdog
+}  // end of WDT_vect
 
 // Analog input pin that the soil moisture sensor is attached to
 const int probesInPin = A1;
-const int lightInPin = A2;  
+const int lightInPin = A2;
+const int pumpOutPin = 12;
 
 // value read from the soil moisture sensor
 int probesValue = 0;
 int lightValue = 0;
 
  // if the readings from the soil sensor drop below this number, then turn on the pump
-int dryValue = 700;
-int darkValue = 500;
+const int dryValue = 700;
+const int darkValue = 500;
 
 /***************************************************
  *  Name:        setup
@@ -96,26 +51,8 @@ int darkValue = 500;
  ***************************************************/
 void setup()
 {
-  Serial.begin(9600);
   Serial.println("Initialising...");
-  
-  /*** Setup the WDT ***/
-  
-  /* Clear the reset flag. */
-  MCUSR &= ~(1<<WDRF);
-  
-  /* In order to change WDE or the prescaler, we need to
-   * set WDCE (This will allow updates for 4 clock cycles).
-   */
-  WDTCSR |= (1<<WDCE) | (1<<WDE);
-
-  /* set new watchdog timeout prescaler value */
-  WDTCSR = 1<<WDP0 | 1<<WDP3; /* 8.0 seconds */
-  
-  /* Enable the WD interrupt (note no reset). */
-  WDTCSR |= _BV(WDIE);
-  
-  pinMode(12, OUTPUT);
+  Serial.begin(9600);
   
   Serial.println("Initialisation complete.");
 }
@@ -136,36 +73,36 @@ void water()
     //Turns on the water pump if the soil is too dry
     //Increasing the delay will increase the amount of water pumped
     if(probesValue < dryValue && lightValue < darkValue){
-      digitalWrite(12, HIGH);
+      pinMode(pumpOutPin, OUTPUT);
+      digitalWrite(pumpOutPin, HIGH);
       delay(5000);
-      digitalWrite(12, LOW);
+      digitalWrite(pumpOutPin, LOW);
+      pinMode(pumpOutPin, INPUT);
     }
 }
 
-/***************************************************
- *  Name:        enterSleep
- *
- *  Returns:     Nothing.
- *
- *  Parameters:  None.
- *
- *  Description: Main application loop.
- *
- ***************************************************/
-void loop()
+void loop () 
 {
-  if(f_wdt == 1)
-  {
-    water();
-    
-    /* Don't forget to clear the flag. */
-    f_wdt = 0;
-    
-    /* Re-enter sleep mode. */
-    enterSleep();
-  }
-  else
-  {
-    /* Do nothing. */
-  }
-}
+ 
+  water();
+
+  // clear various "reset" flags
+  MCUSR = 0;     
+  // allow changes, disable reset
+  WDTCSR = _BV (WDCE) | _BV (WDE);
+  // set interrupt mode and an interval 
+  WDTCSR = _BV (WDIE) | _BV (WDP3) | _BV (WDP0);    // set WDIE, and 8 seconds delay
+  wdt_reset();  // pat the dog
+  
+  set_sleep_mode (SLEEP_MODE_PWR_DOWN);  
+  sleep_enable();
+ 
+  // turn off brown-out enable in software
+  MCUCR = _BV (BODS) | _BV (BODSE);
+  MCUCR = _BV (BODS); 
+  sleep_cpu ();  
+  
+  // cancel sleep as a precaution
+  sleep_disable();
+  
+  } // end of loop
