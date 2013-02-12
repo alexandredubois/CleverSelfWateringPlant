@@ -34,9 +34,12 @@ const int pumpOutPin = 12;
 int probesValue = 0;
 int lightValue = 0;
 
+const int loopCount = 2;
+int timeCount = 0;
+
  // if the readings from the soil sensor drop below this number, then turn on the pump
 const int dryValue = 700;
-const int darkValue = 500;
+const int darkValue = 300;
 
 /***************************************************
  *  Name:        setup
@@ -57,34 +60,45 @@ void setup()
   Serial.println("Initialisation complete.");
 }
 
+//Check if the plant needs water !
 void water()
 {
-  // read the analog in value:
-    probesValue = analogRead(probesInPin);
-    lightValue = analogRead(lightInPin);
-
-    // print the probes value to the serial monitor:
-    Serial.print("probes value = " );                       
-    Serial.println(probesValue);
-
-    Serial.print("light value = " );                       
-    Serial.println(lightValue);   
-
-    //Turns on the water pump if the soil is too dry
-    //Increasing the delay will increase the amount of water pumped
-    if(probesValue < dryValue && lightValue < darkValue){
-      pinMode(pumpOutPin, OUTPUT);
-      digitalWrite(pumpOutPin, HIGH);
-      delay(5000);
-      digitalWrite(pumpOutPin, LOW);
-      pinMode(pumpOutPin, INPUT);
-    }
+    
+      // read the analog in value:
+      probesValue = analogRead(probesInPin);
+      lightValue = analogRead(lightInPin);
+  
+      // print the probes value to the serial monitor:
+      Serial.print("probes value = " );                       
+      Serial.println(probesValue);
+  
+      Serial.print("light value = " );                       
+      Serial.println(lightValue);   
+  
+      //Turns on the water pump if the soil is too dry
+      //Increasing the delay will increase the amount of water pumped
+      if(probesValue < dryValue && lightValue < darkValue){
+        pinMode(pumpOutPin, OUTPUT);
+        digitalWrite(pumpOutPin, HIGH);
+        delay(10000);
+        digitalWrite(pumpOutPin, LOW);
+        pinMode(pumpOutPin, INPUT);
+      }
 }
 
 void loop () 
 {
- 
-  water();
+  if(timeCount >= loopCount){
+    Serial.println("Check plant status !");
+    water();
+    //Reset time counter
+    timeCount = 0;
+  }
+  //Wait more...
+  else{
+    Serial.println("Wait !");
+    ++timeCount;
+  }
 
   // clear various "reset" flags
   MCUSR = 0;     
