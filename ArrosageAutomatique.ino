@@ -15,15 +15,9 @@
   For more information, check out:
   http://www.instructables.com/id/Self-Watering-Plant/
  */
-#include <avr/sleep.h>
-#include <avr/power.h>
-#include <avr/wdt.h>
+#include <JeeLib.h>
 
-// watchdog interrupt
-ISR (WDT_vect) 
-{
-   wdt_disable();  // disable watchdog
-}  // end of WDT_vect
+ISR(WDT_vect) { Sleepy::watchdogEvent(); } // Setup for low power waiting
 
 // Analog input pin that the soil moisture sensor is attached to
 const int probesInPin = A1;
@@ -88,7 +82,7 @@ void water()
         }
         pinMode(pumpOutPin, OUTPUT);
         digitalWrite(pumpOutPin, HIGH);
-        delay(10000);
+        Sleepy::loseSomeTime(10000);
         if(debug == 1)
         {
           Serial.println("Pump is OFF !");
@@ -114,28 +108,11 @@ void loop ()
     if(debug == 1)
     {
       Serial.println("Wait !");
+      Sleepy::loseSomeTime(300);
     }
     ++timeCount;
-    delay(300);
   }
 
-  // clear various "reset" flags
-  MCUSR = 0;     
-  // allow changes, disable reset
-  WDTCSR = _BV (WDCE) | _BV (WDE);
-  // set interrupt mode and an interval 
-  WDTCSR = _BV (WDIE) | _BV (WDP3) | _BV (WDP0);    // set WDIE, and 8 seconds delay
-  wdt_reset();  // pat the dog
-  
-  set_sleep_mode (SLEEP_MODE_PWR_DOWN);  
-  sleep_enable();
- 
-  // turn off brown-out enable in software
-  MCUCR = _BV (BODS) | _BV (BODSE);
-  MCUCR = _BV (BODS); 
-  sleep_cpu ();  
-  
-  // cancel sleep as a precaution
-  sleep_disable();
+  Sleepy::loseSomeTime(10000);      // Instead of delay(1000); 
   
   } // end of loop
