@@ -29,6 +29,7 @@ ISR (WDT_vect)
 const int probesInPin = A1;
 const int lightInPin = A2;
 const int pumpOutPin = 12;
+const int debug = 1;
 
 // value read from the soil moisture sensor
 int probesValue = 0;
@@ -54,10 +55,11 @@ const int darkValue = 300;
  ***************************************************/
 void setup()
 {
-  Serial.println("Initialising...");
-  Serial.begin(9600);
-  
-  Serial.println("Initialisation complete.");
+  if(debug == 1){
+    Serial.println("Initialising...");
+    Serial.begin(9600);
+    Serial.println("Initialisation complete.");
+  }
 }
 
 //Check if the plant needs water !
@@ -69,18 +71,28 @@ void water()
       lightValue = analogRead(lightInPin);
   
       // print the probes value to the serial monitor:
-      Serial.print("probes value = " );                       
-      Serial.println(probesValue);
+      if(debug == 1)
+      {
+        Serial.print("probes value = " );                       
+        Serial.println(probesValue);
   
-      Serial.print("light value = " );                       
-      Serial.println(lightValue);   
-  
+        Serial.print("light value = " );                       
+        Serial.println(lightValue);   
+      }
       //Turns on the water pump if the soil is too dry
       //Increasing the delay will increase the amount of water pumped
       if(probesValue < dryValue && lightValue < darkValue){
+        if(debug == 1)
+        {
+          Serial.println("Pump is ON !");
+        }
         pinMode(pumpOutPin, OUTPUT);
         digitalWrite(pumpOutPin, HIGH);
         delay(10000);
+        if(debug == 1)
+        {
+          Serial.println("Pump is OFF !");
+        }
         digitalWrite(pumpOutPin, LOW);
         pinMode(pumpOutPin, INPUT);
       }
@@ -89,15 +101,22 @@ void water()
 void loop () 
 {
   if(timeCount >= loopCount){
-    Serial.println("Check plant status !");
+    if(debug == 1)
+    {
+      Serial.println("Check plant");
+    }
     water();
     //Reset time counter
     timeCount = 0;
   }
   //Wait more...
   else{
-    Serial.println("Wait !");
+    if(debug == 1)
+    {
+      Serial.println("Wait !");
+    }
     ++timeCount;
+    delay(300);
   }
 
   // clear various "reset" flags
