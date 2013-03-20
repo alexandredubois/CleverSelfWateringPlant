@@ -3,17 +3,14 @@
  by Alexandre Dubois
  inspired by Randy Sarafan
  
- Reads a soil moisture sensor and a LDR and turns on a relay that controls a water pump.
- 
- The soil moisture sensor involves a 10K resistor between pins A1 and ground
- and a probe connected to pin A1 and another connected to +5V. These probes 
- are embedded and inch apart in the plant's soil.
- 
- The light sensor involves a 2,2K resistor between pins A2 and ground. The LDR is connected
- both to the A2 pin and the +5V.
+ Sketch features
+ - Monitor a plant and add water when both the soil moisture and the light are low (to prevent watering the plant at noon)
+ - Let the user manually setup its ideal moisture level
+ - Save power to run for months using 3 AA batteries
+ - Noise free using transistors instead of a relay
  
  For more information, check out:
- http://www.instructables.com/id/Self-Watering-Plant/
+ http://blog.alexandredubois.com
  */
 #include <JeeLib.h>
 
