@@ -30,12 +30,13 @@ const int pumpOutPin = 12;//Pin attached to the water pump
 const int greenOutPin = 7;
 const int redOutPin = 8;
 
-const int debug = 0;
+const int debug = 1;
 
 int probesTreshold = 0;
 int probesValue = 0;
 int lightValue = 0;
 
+const long voltTreshold = 3500;
 const int loopCount = 2;
 int timeCount = 1;
 const int hysteresis = 100;
@@ -74,7 +75,6 @@ void water()
     }
     digitalWrite(pumpOutPin, LOW);
     pinMode(pumpOutPin, INPUT);
-  }
 }
 
 /*Read potentiometer value*/
@@ -114,6 +114,10 @@ void readLightValue()
 /*Let the user define its ideal moisture level slowly blinking led*/
 void tresholdSetup()
 {
+  if(debug == 1)
+  {
+     Serial.println("Treshold setup.");
+  }
   for (int i=0;i<=100;i++)
   {
     readPotValue();
@@ -134,6 +138,11 @@ void tresholdSetup()
     }
     Sleepy::loseSomeTime(300);
   }
+  
+  if(debug == 1)
+  {
+     Serial.println("Treshold setup done.");
+  }
 }
 
 /*Blink leds to warn the user before launching the main program*/
@@ -151,13 +160,50 @@ void launchWarning()
 }
 
 /*Flash the green led quickly to show the unit is working*/
-void blinkStatusLed()
+void blinkGreenStatusLed()
 {
   pinMode(greenOutPin, OUTPUT);
   digitalWrite(greenOutPin, HIGH);
-  delay(100);
+  delay(50);
   digitalWrite(greenOutPin, LOW);
   pinMode(greenOutPin, INPUT);
+}
+
+/*Flash the red led quickly to show the unit is low battery*/
+void blinkRedStatusLed()
+{
+  pinMode(redOutPin, OUTPUT);
+  digitalWrite(redOutPin, HIGH);
+  delay(50);
+  digitalWrite(redOutPin, LOW);
+  pinMode(redOutPin, INPUT);
+}
+
+//Secret voltmeter function from : http://code.google.com/p/tinkerit/wiki/SecretVoltmeter
+long readVcc() {
+  long result;
+  // Read 1.1V reference against AVcc
+  ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
+  delay(2); // Wait for Vref to settle
+  ADCSRA |= _BV(ADSC); // Convert
+  while (bit_is_set(ADCSRA,ADSC));
+  result = ADCL;
+  result |= ADCH<<8;
+  result = 1126400L / result; // Back-calculate AVcc in mV
+  return result;
+}
+
+//Check if the battery is low
+void checkVccLevel(){
+  long vcc = readVcc();
+  if(vcc < voltTreshold)
+  {
+    blinkRedStatusLed();
+  }
+  else
+  {
+    blinkGreenStatusLed();
+  }
 }
 
 /***************************
@@ -201,5 +247,6 @@ void loop ()
     }
     ++timeCount;
   }
-  Sleepy::loseSomeTime(60000);// Wait a minute
+  Sleepy::loseSomeTime(10000);// Wait a minute
+  checkVccLevel();
 } // end of loop
