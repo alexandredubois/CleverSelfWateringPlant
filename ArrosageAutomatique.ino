@@ -8,6 +8,7 @@
  - Let the user manually setup its ideal moisture level
  - Save power to run for months using 3 AA batteries
  - Noise free using transistors instead of a relay
+ - Check the battery level
  
  For more information, check out:
  http://blog.alexandredubois.com
